@@ -18,44 +18,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $success = false;
     
     try {
-        // Test database connection
-        $dsn = "mysql:host={$db_host};charset=utf8mb4";
-        $pdo = new PDO($dsn, $db_user, $db_pass);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
-        // Create database if it doesn't exist
-        $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$db_name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-        $pdo->exec("USE `{$db_name}`");
-        
-        // Update config file
-        $config_content = file_get_contents($config_file);
-        $config_content = str_replace("'localhost'", "'{$db_host}'", $config_content);
-        $config_content = str_replace("'formularios_db'", "'{$db_name}'", $config_content);
-        $config_content = str_replace("'root'", "'{$db_user}'", $config_content);
-        $config_content = str_replace("'password' => ''", "'password' => '{$db_pass}'", $config_content);
-        
-        file_put_contents($config_file, $config_content);
-        
-        // Include the updated database class
+        // Include the database class
         require_once $config_file;
         
-        // Initialize database
+        // Initialize database (will auto-fallback to SQLite if MySQL unavailable)
         $database = new Database();
         $conn = $database->getConnection();
         
         if ($conn) {
+            // Update config file with provided settings (even if using SQLite)
+            $config_content = file_get_contents($config_file);
+            $config_content = str_replace("'localhost'", "'{$db_host}'", $config_content);
+            $config_content = str_replace("'formularios_db'", "'{$db_name}'", $config_content);
+            $config_content = str_replace("'root'", "'{$db_user}'", $config_content);
+            $config_content = str_replace("'password' => ''", "'password' => '{$db_pass}'", $config_content);
+            
+            file_put_contents($config_file, $config_content);
+            
             // Setup tables
             $database->setupTables();
             
             // Insert demo users
             $database->insertDemoUsers();
             
-            // Insert some demo products
-            $products_sql = "INSERT IGNORE INTO productos (nombre, descripcion, precio, stock) VALUES 
-                ('Reserva de Salón', 'Reserva de salón de eventos por 4 horas', 500.00, 10),
-                ('Servicio de Catering', 'Servicio de catering para eventos', 150.00, 50),
-                ('Decoración Básica', 'Paquete básico de decoración', 200.00, 20),
-                ('Sonido y Audio', 'Equipo de sonido profesional', 300.00, 5)";
+            // Insert some demo products (SQLite compatible)
+            $driver = $conn->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $products_sql = "INSERT OR IGNORE INTO productos (nombre, descripcion, precio, stock) VALUES 
+                    ('Reserva de Salón', 'Reserva de salón de eventos por 4 horas', 500.00, 10),
+                    ('Servicio de Catering', 'Servicio de catering para eventos', 150.00, 50),
+                    ('Decoración Básica', 'Paquete básico de decoración', 200.00, 20),
+                    ('Sonido y Audio', 'Equipo de sonido profesional', 300.00, 5)";
+            } else {
+                $products_sql = "INSERT IGNORE INTO productos (nombre, descripcion, precio, stock) VALUES 
+                    ('Reserva de Salón', 'Reserva de salón de eventos por 4 horas', 500.00, 10),
+                    ('Servicio de Catering', 'Servicio de catering para eventos', 150.00, 50),
+                    ('Decoración Básica', 'Paquete básico de decoración', 200.00, 20),
+                    ('Sonido y Audio', 'Equipo de sonido profesional', 300.00, 5)";
+            }
             $conn->exec($products_sql);
             
             $success = true;

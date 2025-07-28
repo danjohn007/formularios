@@ -142,8 +142,12 @@ $router->post('/respuestas/agregar-comentario', function() {
     $respuesta->agregarComentario();
 });
 
-// Installation route
+// Installation routes
 $router->get('/install', function() {
+    include 'install.php';
+});
+
+$router->post('/install', function() {
     include 'install.php';
 });
 
