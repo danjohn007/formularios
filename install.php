@@ -36,30 +36,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             file_put_contents($config_file, $config_content);
             
             // Setup tables
-            $database->setupTables();
+            $tables_created = $database->setupTables();
+            if (!$tables_created) {
+                $errors[] = 'Error al crear las tablas de la base de datos';
+            }
             
             // Insert demo users
-            $database->insertDemoUsers();
+            $users_created = $database->insertDemoUsers();
+            if (!$users_created) {
+                $errors[] = 'Error al insertar usuarios de demostración';
+            }
             
             // Insert some demo products (SQLite compatible)
-            $driver = $conn->getAttribute(PDO::ATTR_DRIVER_NAME);
-            if ($driver === 'sqlite') {
-                $products_sql = "INSERT OR IGNORE INTO productos (nombre, descripcion, precio, stock) VALUES 
-                    ('Reserva de Salón', 'Reserva de salón de eventos por 4 horas', 500.00, 10),
-                    ('Servicio de Catering', 'Servicio de catering para eventos', 150.00, 50),
-                    ('Decoración Básica', 'Paquete básico de decoración', 200.00, 20),
-                    ('Sonido y Audio', 'Equipo de sonido profesional', 300.00, 5)";
-            } else {
-                $products_sql = "INSERT IGNORE INTO productos (nombre, descripcion, precio, stock) VALUES 
-                    ('Reserva de Salón', 'Reserva de salón de eventos por 4 horas', 500.00, 10),
-                    ('Servicio de Catering', 'Servicio de catering para eventos', 150.00, 50),
-                    ('Decoración Básica', 'Paquete básico de decoración', 200.00, 20),
-                    ('Sonido y Audio', 'Equipo de sonido profesional', 300.00, 5)";
+            $products_created = false;
+            try {
+                $driver = $conn->getAttribute(PDO::ATTR_DRIVER_NAME);
+                if ($driver === 'sqlite') {
+                    $products_sql = "INSERT OR IGNORE INTO productos (nombre, descripcion, precio, stock) VALUES 
+                        ('Reserva de Salón', 'Reserva de salón de eventos por 4 horas', 500.00, 10),
+                        ('Servicio de Catering', 'Servicio de catering para eventos', 150.00, 50),
+                        ('Decoración Básica', 'Paquete básico de decoración', 200.00, 20),
+                        ('Sonido y Audio', 'Equipo de sonido profesional', 300.00, 5)";
+                } else {
+                    $products_sql = "INSERT IGNORE INTO productos (nombre, descripcion, precio, stock) VALUES 
+                        ('Reserva de Salón', 'Reserva de salón de eventos por 4 horas', 500.00, 10),
+                        ('Servicio de Catering', 'Servicio de catering para eventos', 150.00, 50),
+                        ('Decoración Básica', 'Paquete básico de decoración', 200.00, 20),
+                        ('Sonido y Audio', 'Equipo de sonido profesional', 300.00, 5)";
+                }
+                $products_created = $conn->exec($products_sql) !== false;
+                if (!$products_created) {
+                    $errors[] = 'Error al insertar productos de demostración';
+                }
+            } catch (Exception $e) {
+                $errors[] = 'Error al insertar productos: ' . $e->getMessage();
             }
-            $conn->exec($products_sql);
             
-            $success = true;
-            $installation_complete = true;
+            // Only mark as successful if all operations succeeded
+            if ($tables_created && $users_created && $products_created) {
+                $success = true;
+                $installation_complete = true;
+                
+                // Store which database type was actually used
+                $database_type = $conn->getAttribute(PDO::ATTR_DRIVER_NAME);
+                if ($database_type === 'sqlite') {
+                    $success_message = 'Sistema instalado correctamente usando SQLite (fallback)';
+                } else {
+                    $success_message = 'Sistema instalado correctamente usando MySQL';
+                }
+            } else {
+                $errors[] = 'La instalación no se completó debido a errores en las operaciones de base de datos';
+            }
             
         } else {
             $errors[] = 'No se pudo conectar a la base de datos';
@@ -162,7 +189,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <i class="fas fa-check-circle me-2"></i>
                                 ¡Instalación Completada!
                             </h4>
-                            <p>El sistema se ha instalado correctamente. Se han creado las siguientes tablas:</p>
+                            <p><?= isset($success_message) ? htmlspecialchars($success_message) : 'El sistema se ha instalado correctamente.' ?></p>
+                            <p>Se han creado las siguientes tablas:</p>
                             <ul>
                                 <li>Usuarios (con usuarios demo)</li>
                                 <li>Formularios</li>

@@ -307,17 +307,25 @@ class Database {
             ]
         ];
 
-        $driver = $this->conn->getAttribute(PDO::ATTR_DRIVER_NAME);
-        if ($driver === 'sqlite') {
-            $sql = "INSERT OR IGNORE INTO usuarios (nombre, email, password, rol) VALUES (?, ?, ?, ?)";
-        } else {
-            $sql = "INSERT IGNORE INTO usuarios (nombre, email, password, rol) VALUES (?, ?, ?, ?)";
-        }
-        
-        $stmt = $this->conn->prepare($sql);
+        try {
+            $driver = $this->conn->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $sql = "INSERT OR IGNORE INTO usuarios (nombre, email, password, rol) VALUES (?, ?, ?, ?)";
+            } else {
+                $sql = "INSERT IGNORE INTO usuarios (nombre, email, password, rol) VALUES (?, ?, ?, ?)";
+            }
+            
+            $stmt = $this->conn->prepare($sql);
 
-        foreach ($users as $user) {
-            $stmt->execute([$user['nombre'], $user['email'], $user['password'], $user['rol']]);
+            foreach ($users as $user) {
+                if (!$stmt->execute([$user['nombre'], $user['email'], $user['password'], $user['rol']])) {
+                    return false;
+                }
+            }
+            return true;
+        } catch(PDOException $e) {
+            error_log("Error inserting demo users: " . $e->getMessage());
+            return false;
         }
     }
 }
