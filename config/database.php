@@ -283,6 +283,259 @@ class Database {
     }
 
     /**
+     * Insert demo forms with fields
+     */
+    public function insertDemoForms() {
+        try {
+            $driver = $this->conn->getAttribute(PDO::ATTR_DRIVER_NAME);
+            
+            // Get admin user ID for forms
+            $stmt = $this->conn->prepare("SELECT id FROM usuarios WHERE rol = 'admin' LIMIT 1");
+            $stmt->execute();
+            $admin = $stmt->fetch();
+            if (!$admin) {
+                return false;
+            }
+            $admin_id = $admin['id'];
+            
+            // Demo forms to create
+            $forms = [
+                [
+                    'titulo' => 'Reserva de Salón de Eventos',
+                    'descripcion' => 'Formulario para reservar nuestro salón de eventos con todos los servicios incluidos.',
+                    'tipo' => 'reservacion',
+                    'configuracion' => '{"requiere_pago": true, "notificaciones": true}',
+                    'campos' => [
+                        ['etiqueta' => 'Nombre Completo', 'tipo' => 'text', 'requerido' => 1, 'orden' => 1],
+                        ['etiqueta' => 'Email', 'tipo' => 'email', 'requerido' => 1, 'orden' => 2],
+                        ['etiqueta' => 'Teléfono', 'tipo' => 'tel', 'requerido' => 1, 'orden' => 3],
+                        ['etiqueta' => 'Fecha del Evento', 'tipo' => 'date', 'requerido' => 1, 'orden' => 4],
+                        ['etiqueta' => 'Hora de Inicio', 'tipo' => 'time', 'requerido' => 1, 'orden' => 5],
+                        ['etiqueta' => 'Número de Invitados', 'tipo' => 'number', 'requerido' => 1, 'orden' => 6],
+                        ['etiqueta' => 'Tipo de Evento', 'tipo' => 'select', 'opciones' => '["Boda", "Cumpleaños", "Corporativo", "Social", "Otro"]', 'requerido' => 1, 'orden' => 7],
+                        ['etiqueta' => 'Servicios Adicionales', 'tipo' => 'checkbox', 'opciones' => '["Catering", "Decoración", "Sonido", "Fotografía"]', 'requerido' => 0, 'orden' => 8],
+                        ['etiqueta' => 'Comentarios Especiales', 'tipo' => 'textarea', 'requerido' => 0, 'orden' => 9]
+                    ]
+                ],
+                [
+                    'titulo' => 'Pedido de Productos y Servicios',
+                    'descripcion' => 'Realiza tu pedido de productos y servicios disponibles en nuestro catálogo.',
+                    'tipo' => 'compra',
+                    'configuracion' => '{"calcula_total": true, "inventario": true}',
+                    'campos' => [
+                        ['etiqueta' => 'Nombre del Cliente', 'tipo' => 'text', 'requerido' => 1, 'orden' => 1],
+                        ['etiqueta' => 'Email de Contacto', 'tipo' => 'email', 'requerido' => 1, 'orden' => 2],
+                        ['etiqueta' => 'Productos Deseados', 'tipo' => 'checkbox', 'opciones' => '["Reserva de Salón", "Servicio de Catering", "Decoración Básica", "Sonido y Audio"]', 'requerido' => 1, 'orden' => 3],
+                        ['etiqueta' => 'Cantidad', 'tipo' => 'number', 'requerido' => 1, 'orden' => 4],
+                        ['etiqueta' => 'Fecha de Entrega', 'tipo' => 'date', 'requerido' => 1, 'orden' => 5],
+                        ['etiqueta' => 'Método de Entrega', 'tipo' => 'radio', 'opciones' => '["Pickup en tienda", "Entrega a domicilio"]', 'requerido' => 1, 'orden' => 6],
+                        ['etiqueta' => 'Dirección de Entrega', 'tipo' => 'textarea', 'requerido' => 0, 'orden' => 7],
+                        ['etiqueta' => 'Notas del Pedido', 'tipo' => 'textarea', 'requerido' => 0, 'orden' => 8]
+                    ]
+                ],
+                [
+                    'titulo' => 'Solicitud de Servicio Técnico',
+                    'descripcion' => 'Solicita asistencia técnica o mantenimiento para eventos y equipos.',
+                    'tipo' => 'servicio',
+                    'configuracion' => '{"urgencia": true, "seguimiento": true}',
+                    'campos' => [
+                        ['etiqueta' => 'Nombre de Contacto', 'tipo' => 'text', 'requerido' => 1, 'orden' => 1],
+                        ['etiqueta' => 'Email', 'tipo' => 'email', 'requerido' => 1, 'orden' => 2],
+                        ['etiqueta' => 'Teléfono', 'tipo' => 'tel', 'requerido' => 1, 'orden' => 3],
+                        ['etiqueta' => 'Tipo de Servicio', 'tipo' => 'select', 'opciones' => '["Mantenimiento de Audio", "Instalación de Equipos", "Soporte Técnico", "Reparación", "Consultoría"]', 'requerido' => 1, 'orden' => 4],
+                        ['etiqueta' => 'Urgencia', 'tipo' => 'radio', 'opciones' => '["Baja", "Media", "Alta", "Crítica"]', 'requerido' => 1, 'orden' => 5],
+                        ['etiqueta' => 'Fecha Preferida', 'tipo' => 'date', 'requerido' => 1, 'orden' => 6],
+                        ['etiqueta' => 'Descripción del Problema', 'tipo' => 'textarea', 'requerido' => 1, 'orden' => 7],
+                        ['etiqueta' => 'Adjuntar Imagen', 'tipo' => 'file', 'requerido' => 0, 'orden' => 8]
+                    ]
+                ]
+            ];
+            
+            foreach ($forms as $form_data) {
+                // Insert form
+                if ($driver === 'sqlite') {
+                    $sql = "INSERT OR IGNORE INTO formularios (titulo, descripcion, tipo, configuracion, usuario_id) VALUES (?, ?, ?, ?, ?)";
+                } else {
+                    $sql = "INSERT IGNORE INTO formularios (titulo, descripcion, tipo, configuracion, usuario_id) VALUES (?, ?, ?, ?, ?)";
+                }
+                
+                $stmt = $this->conn->prepare($sql);
+                $success = $stmt->execute([
+                    $form_data['titulo'],
+                    $form_data['descripcion'],
+                    $form_data['tipo'],
+                    $form_data['configuracion'],
+                    $admin_id
+                ]);
+                
+                if (!$success) {
+                    continue;
+                }
+                
+                // Get the form ID
+                $form_id = $this->conn->lastInsertId();
+                if (!$form_id) {
+                    // Try to get existing form ID
+                    $stmt = $this->conn->prepare("SELECT id FROM formularios WHERE titulo = ? LIMIT 1");
+                    $stmt->execute([$form_data['titulo']]);
+                    $existing = $stmt->fetch();
+                    if ($existing) {
+                        $form_id = $existing['id'];
+                    } else {
+                        continue;
+                    }
+                }
+                
+                // Insert fields for this form
+                foreach ($form_data['campos'] as $campo) {
+                    if ($driver === 'sqlite') {
+                        $field_sql = "INSERT OR IGNORE INTO campos (formulario_id, etiqueta, tipo, opciones, requerido, orden) VALUES (?, ?, ?, ?, ?, ?)";
+                    } else {
+                        $field_sql = "INSERT IGNORE INTO campos (formulario_id, etiqueta, tipo, opciones, requerido, orden) VALUES (?, ?, ?, ?, ?, ?)";
+                    }
+                    
+                    $field_stmt = $this->conn->prepare($field_sql);
+                    $field_stmt->execute([
+                        $form_id,
+                        $campo['etiqueta'],
+                        $campo['tipo'],
+                        $campo['opciones'] ?? null,
+                        $campo['requerido'],
+                        $campo['orden']
+                    ]);
+                }
+            }
+            
+            return true;
+        } catch(PDOException $e) {
+            error_log("Error inserting demo forms: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Insert demo responses
+     */
+    public function insertDemoResponses() {
+        try {
+            $driver = $this->conn->getAttribute(PDO::ATTR_DRIVER_NAME);
+            
+            // Get user IDs
+            $stmt = $this->conn->prepare("SELECT id, rol FROM usuarios");
+            $stmt->execute();
+            $users = $stmt->fetchAll();
+            
+            if (empty($users)) {
+                return false;
+            }
+            
+            $admin_id = null;
+            $client_id = null;
+            foreach ($users as $user) {
+                if ($user['rol'] === 'admin') $admin_id = $user['id'];
+                if ($user['rol'] === 'cliente') $client_id = $user['id'];
+            }
+            
+            // Get form IDs
+            $stmt = $this->conn->prepare("SELECT id, titulo, tipo FROM formularios");
+            $stmt->execute();
+            $forms = $stmt->fetchAll();
+            
+            if (empty($forms)) {
+                return false;
+            }
+            
+            // Sample responses to create
+            $responses = [
+                [
+                    'formulario_titulo' => 'Reserva de Salón de Eventos',
+                    'usuario_id' => $client_id,
+                    'datos' => '{"nombre_completo": "María García", "email": "maria@example.com", "telefono": "555-0123", "fecha_evento": "2024-03-15", "hora_inicio": "18:00", "numero_invitados": "150", "tipo_evento": "Boda", "servicios_adicionales": ["Catering", "Decoración", "Sonido"], "comentarios": "Necesitamos decoración en colores pasteles"}',
+                    'estatus' => 'completado',
+                    'asignado_a' => $admin_id,
+                    'total' => 2500.00,
+                    'fecha_entrega' => '2024-03-15',
+                    'metodo_entrega' => 'pickup',
+                    'fecha_creacion' => date('Y-m-d H:i:s', strtotime('-10 days'))
+                ],
+                [
+                    'formulario_titulo' => 'Pedido de Productos y Servicios',
+                    'usuario_id' => $client_id,
+                    'datos' => '{"nombre_cliente": "Juan Pérez", "email": "juan@example.com", "productos": ["Servicio de Catering", "Sonido y Audio"], "cantidad": "2", "fecha_entrega": "2024-03-20", "metodo_entrega": "Entrega a domicilio", "direccion": "Calle Principal #123", "notas": "Confirmar horario de entrega"}',
+                    'estatus' => 'en_proceso',
+                    'asignado_a' => $admin_id,
+                    'total' => 900.00,
+                    'fecha_entrega' => '2024-03-20',
+                    'metodo_entrega' => 'domicilio',
+                    'fecha_creacion' => date('Y-m-d H:i:s', strtotime('-5 days'))
+                ],
+                [
+                    'formulario_titulo' => 'Solicitud de Servicio Técnico',
+                    'usuario_id' => $client_id,
+                    'datos' => '{"nombre_contacto": "Ana López", "email": "ana@example.com", "telefono": "555-0456", "tipo_servicio": "Mantenimiento de Audio", "urgencia": "Media", "fecha_preferida": "2024-03-18", "descripcion": "Equipo de sonido presenta interferencias durante eventos"}',
+                    'estatus' => 'pendiente',
+                    'asignado_a' => null,
+                    'total' => 250.00,
+                    'fecha_entrega' => '2024-03-18',
+                    'metodo_entrega' => 'pickup',
+                    'fecha_creacion' => date('Y-m-d H:i:s', strtotime('-2 days'))
+                ],
+                [
+                    'formulario_titulo' => 'Reserva de Salón de Eventos',
+                    'usuario_id' => $client_id,
+                    'datos' => '{"nombre_completo": "Carlos Martínez", "email": "carlos@example.com", "telefono": "555-0789", "fecha_evento": "2024-04-05", "hora_inicio": "20:00", "numero_invitados": "80", "tipo_evento": "Cumpleaños", "servicios_adicionales": ["Catering", "Decoración"], "comentarios": "Fiesta sorpresa, decoración temática"}',
+                    'estatus' => 'pendiente',
+                    'asignado_a' => $admin_id,
+                    'total' => 1800.00,
+                    'fecha_entrega' => '2024-04-05',
+                    'metodo_entrega' => 'pickup',
+                    'fecha_creacion' => date('Y-m-d H:i:s', strtotime('-1 day'))
+                ]
+            ];
+            
+            foreach ($responses as $response_data) {
+                // Find the form ID by title
+                $form_id = null;
+                foreach ($forms as $form) {
+                    if ($form['titulo'] === $response_data['formulario_titulo']) {
+                        $form_id = $form['id'];
+                        break;
+                    }
+                }
+                
+                if (!$form_id) {
+                    continue;
+                }
+                
+                // Insert response
+                if ($driver === 'sqlite') {
+                    $sql = "INSERT OR IGNORE INTO respuestas (formulario_id, usuario_id, datos, estatus, asignado_a, total, fecha_entrega, metodo_entrega, fecha_creacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                } else {
+                    $sql = "INSERT IGNORE INTO respuestas (formulario_id, usuario_id, datos, estatus, asignado_a, total, fecha_entrega, metodo_entrega, fecha_creacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                }
+                
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([
+                    $form_id,
+                    $response_data['usuario_id'],
+                    $response_data['datos'],
+                    $response_data['estatus'],
+                    $response_data['asignado_a'],
+                    $response_data['total'],
+                    $response_data['fecha_entrega'],
+                    $response_data['metodo_entrega'],
+                    $response_data['fecha_creacion']
+                ]);
+            }
+            
+            return true;
+        } catch(PDOException $e) {
+            error_log("Error inserting demo responses: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Insert demo users
      */
     public function insertDemoUsers() {

@@ -19,13 +19,23 @@ class RespuestaController {
     public function index() {
         $this->auth->requireOperador();
         
+        $user = $this->auth->getCurrentUser();
+        $isOperador = $this->auth->isOperador();
+        
         $filtros = [];
-        if (isset($_GET['estatus'])) {
+        if (isset($_GET['estatus']) && !empty($_GET['estatus'])) {
             $filtros['estatus'] = $_GET['estatus'];
+        }
+        if (isset($_GET['formulario_id']) && !empty($_GET['formulario_id'])) {
+            $filtros['formulario_id'] = $_GET['formulario_id'];
         }
         
         $respuesta = new Respuesta($this->db);
         $respuestas = $respuesta->obtenerTodas($filtros);
+        
+        // Obtener formularios para el filtro
+        $formulario = new Formulario($this->db);
+        $formularios = $formulario->obtenerActivos();
         
         // Obtener operadores para asignación
         $usuario = new Usuario($this->db);
