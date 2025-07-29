@@ -1,7 +1,6 @@
 <?php 
-// Get current user info
-$user = (new AuthController())->getCurrentUser();
-$isOperador = (new AuthController())->isOperador();
+// User data and permissions are now passed from the controller
+// $user and $isOperador variables are available from DashboardController
 ?>
 <!DOCTYPE html>
 <html lang="es">

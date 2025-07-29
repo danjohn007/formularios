@@ -22,6 +22,10 @@ class FormularioController {
         $formulario = new Formulario($this->db);
         $formularios = $formulario->obtenerTodos();
         
+        // Pass user data and permissions to view
+        $user = $this->auth->getCurrentUser();
+        $isOperador = $this->auth->isOperador();
+        
         $title = 'Formularios';
         include 'views/formularios/index.php';
     }
@@ -31,6 +35,10 @@ class FormularioController {
      */
     public function crear() {
         $this->auth->requireOperador();
+        
+        // Pass user data and permissions to view
+        $user = $this->auth->getCurrentUser();
+        $isOperador = $this->auth->isOperador();
         
         $title = 'Crear Formulario';
         include 'views/formularios/crear.php';

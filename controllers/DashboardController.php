@@ -20,6 +20,7 @@ class DashboardController {
         $this->auth->requireAuth();
         
         $user = $this->auth->getCurrentUser();
+        $isOperador = $this->auth->isOperador();
         $stats = $this->obtenerEstadisticas($user);
         
         $title = 'Dashboard';
