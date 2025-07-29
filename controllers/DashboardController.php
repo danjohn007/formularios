@@ -76,16 +76,29 @@ class DashboardController {
                 $stmt->execute();
                 $stats['respuestas_recientes'] = $stmt->fetchAll();
                 
-                // Gráfica de respuestas por mes
-                $stmt = $this->db->prepare("
-                    SELECT 
-                        DATE_FORMAT(fecha_creacion, '%Y-%m') as mes,
-                        COUNT(*) as total
-                    FROM respuestas
-                    WHERE fecha_creacion >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-                    GROUP BY DATE_FORMAT(fecha_creacion, '%Y-%m')
-                    ORDER BY mes
-                ");
+                // Gráfica de respuestas por mes (compatible MySQL/SQLite)
+                $driver = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+                if ($driver === 'sqlite') {
+                    $stmt = $this->db->prepare("
+                        SELECT 
+                            strftime('%Y-%m', fecha_creacion) as mes,
+                            COUNT(*) as total
+                        FROM respuestas
+                        WHERE fecha_creacion >= datetime('now', '-12 months')
+                        GROUP BY strftime('%Y-%m', fecha_creacion)
+                        ORDER BY mes
+                    ");
+                } else {
+                    $stmt = $this->db->prepare("
+                        SELECT 
+                            DATE_FORMAT(fecha_creacion, '%Y-%m') as mes,
+                            COUNT(*) as total
+                        FROM respuestas
+                        WHERE fecha_creacion >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+                        GROUP BY DATE_FORMAT(fecha_creacion, '%Y-%m')
+                        ORDER BY mes
+                    ");
+                }
                 $stmt->execute();
                 $stats['respuestas_por_mes'] = $stmt->fetchAll();
                 
@@ -158,16 +171,30 @@ class DashboardController {
                 break;
                 
             case 'ingresos':
-                $stmt = $this->db->prepare("
-                    SELECT 
-                        DATE_FORMAT(fecha_creacion, '%Y-%m') as mes,
-                        SUM(total) as ingresos
-                    FROM respuestas
-                    WHERE estatus = 'completado' 
-                    AND fecha_creacion >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-                    GROUP BY DATE_FORMAT(fecha_creacion, '%Y-%m')
-                    ORDER BY mes
-                ");
+                $driver = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+                if ($driver === 'sqlite') {
+                    $stmt = $this->db->prepare("
+                        SELECT 
+                            strftime('%Y-%m', fecha_creacion) as mes,
+                            SUM(total) as ingresos
+                        FROM respuestas
+                        WHERE estatus = 'completado' 
+                        AND fecha_creacion >= datetime('now', '-12 months')
+                        GROUP BY strftime('%Y-%m', fecha_creacion)
+                        ORDER BY mes
+                    ");
+                } else {
+                    $stmt = $this->db->prepare("
+                        SELECT 
+                            DATE_FORMAT(fecha_creacion, '%Y-%m') as mes,
+                            SUM(total) as ingresos
+                        FROM respuestas
+                        WHERE estatus = 'completado' 
+                        AND fecha_creacion >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+                        GROUP BY DATE_FORMAT(fecha_creacion, '%Y-%m')
+                        ORDER BY mes
+                    ");
+                }
                 $stmt->execute();
                 $data = $stmt->fetchAll();
                 break;

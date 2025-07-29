@@ -72,8 +72,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'Error al insertar productos: ' . $e->getMessage();
             }
             
+            // Insert demo forms with fields
+            $forms_created = $database->insertDemoForms();
+            if (!$forms_created) {
+                $errors[] = 'Error al insertar formularios de demostración';
+            }
+            
+            // Insert demo responses
+            $responses_created = $database->insertDemoResponses();
+            if (!$responses_created) {
+                $errors[] = 'Error al insertar respuestas de demostración';
+            }
+            
             // Only mark as successful if all operations succeeded
-            if ($tables_created && $users_created && $products_created) {
+            if ($tables_created && $users_created && $products_created && $forms_created && $responses_created) {
                 $success = true;
                 $installation_complete = true;
                 
@@ -190,14 +202,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 ¡Instalación Completada!
                             </h4>
                             <p><?= isset($success_message) ? htmlspecialchars($success_message) : 'El sistema se ha instalado correctamente.' ?></p>
-                            <p>Se han creado las siguientes tablas:</p>
+                            <p>Se han creado las siguientes tablas con datos de demostración:</p>
                             <ul>
-                                <li>Usuarios (con usuarios demo)</li>
-                                <li>Formularios</li>
-                                <li>Campos</li>
-                                <li>Respuestas</li>
+                                <li>Usuarios (3 usuarios demo creados)</li>
+                                <li>Formularios (3 formularios demo creados)</li>
+                                <li>Campos (campos para cada formulario)</li>
+                                <li>Respuestas (4 respuestas demo creadas)</li>
                                 <li>Comentarios</li>
-                                <li>Productos (con productos demo)</li>
+                                <li>Productos (4 productos demo creados)</li>
                                 <li>Archivos</li>
                             </ul>
                             
